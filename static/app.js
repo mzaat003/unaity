@@ -165,26 +165,56 @@ function refreshSpeakerBtn() {
 }
 speakerBtn && speakerBtn.addEventListener("click", () => {
   localStorage.setItem(LS_SPEAK, speakOn() ? "0" : "1");
-  if (!speakOn() && synth) synth.cancel(); // just turned off → stop talking
+  if (!speakOn()) stopSpeaking(); // just turned off → stop talking
   refreshSpeakerBtn();
 });
 refreshSpeakerBtn();
 
-// Speak text with the chosen voice. `force` ignores the on/off toggle
-// (used by the Test button so you can preview a voice while muted).
-function speak(text, force) {
-  if (!synth || (!speakOn() && !force)) return;
+// The button currently playing (so we can flip its icon back when it ends).
+let activeReadBtn = null;
+
+function stopSpeaking() {
+  if (synth) synth.cancel();
+  if (activeReadBtn) { activeReadBtn.textContent = "🔊"; activeReadBtn = null; }
+}
+
+// Speak `text` with the chosen voice. If `btn` is given, show a stop icon on
+// it while playing and reset it when finished.
+function speakFrom(text, btn) {
+  if (!synth) return;
+  stopSpeaking();
   if (!text || !text.trim()) return;
-  synth.cancel();
   const u = new SpeechSynthesisUtterance(text.slice(0, 4000));
   const chosen = voices.find((v) => v.name === (voiceSel && voiceSel.value));
   if (chosen) { u.voice = chosen; u.lang = chosen.lang; }
   u.rate = 1; u.pitch = 1;
+  u.onend = u.onerror = () => {
+    if (btn) btn.textContent = "🔊";
+    if (activeReadBtn === btn) activeReadBtn = null;
+  };
   synth.speak(u);
+  if (btn) { btn.textContent = "⏹"; activeReadBtn = btn; }
+}
+
+// A per-message "read aloud" button (like ChatGPT). Tap to hear that message;
+// tap again to stop. `getText` returns the message's current text.
+function makeReadBtn(getText) {
+  const btn = document.createElement("button");
+  btn.type = "button";
+  btn.className = "readbtn";
+  btn.textContent = "🔊";
+  btn.title = "Read this aloud";
+  btn.setAttribute("aria-label", "Read this message aloud");
+  if (!synth) { btn.style.display = "none"; return btn; }
+  btn.addEventListener("click", () => {
+    if (activeReadBtn === btn) stopSpeaking();
+    else speakFrom(getText(), btn);
+  });
+  return btn;
 }
 
 $("testVoice") && $("testVoice").addEventListener("click", () =>
-  speak("Hi! This is how I'll read your answers out loud.", true)
+  speakFrom("Hi! This is how I'll read your answers out loud.", null)
 );
 
 // ---- rendering -------------------------------------------------------------
@@ -270,8 +300,10 @@ async function sendOne(typing) {
     v.className = "via";
     v.textContent = `— ${model.replace(/:free$/, "")}`;
     botEl.appendChild(v);
+    const readBtn = makeReadBtn(() => text);
+    botEl.appendChild(readBtn);
     history.push({ role: "assistant", content: text });
-    speak(text);
+    if (speakOn()) speakFrom(text, readBtn); // auto-read only if you turned it on
     return true;
   } catch (err) {
     typing.remove();
@@ -299,6 +331,7 @@ async function sendAll(typing) {
   });
   chat.scrollTop = chat.scrollHeight;
 
+  let winnerBtn = null;
   await Promise.all(
     cards.map((card) =>
       streamModel(card.model, history, (d) => {
@@ -307,9 +340,14 @@ async function sendAll(typing) {
         chat.scrollTop = chat.scrollHeight;
       })
         .then(() => {
-          if (!winner && card.text) {
-            winner = card.text;
-            card.label.textContent += "  ⚡ fastest";
+          if (card.text) {
+            const rb = makeReadBtn(() => card.text); // each card gets its own read button
+            card.el.appendChild(rb);
+            if (!winner) {
+              winner = card.text;
+              winnerBtn = rb;
+              card.label.textContent += "  ⚡ fastest";
+            }
           }
         })
         .catch((err) => {
@@ -320,7 +358,7 @@ async function sendAll(typing) {
   );
   if (winner) {
     history.push({ role: "assistant", content: winner });
-    speak(winner); // read the fastest answer aloud
+    if (speakOn()) speakFrom(winner, winnerBtn); // auto-read fastest only if enabled
     return true;
   }
   return false;
@@ -354,7 +392,7 @@ form.addEventListener("submit", async (e) => {
   const text = input.value.trim();
   if (!text) return;
 
-  if (synth) synth.cancel(); // stop reading the previous answer
+  stopSpeaking(); // stop reading the previous answer
   addMessage(text, "user");
   history.push({ role: "user", content: text });
   input.value = "";

@@ -49,6 +49,13 @@
     .msg.bot { align-self: flex-start; background: var(--panel); border: 1px solid var(--border); border-bottom-left-radius: 4px; }
     .msg.error { align-self: flex-start; background: #3a1620; border: 1px solid #6d2436; color: #ffb4c0; }
     .via { display: block; margin-top: 6px; font-size: 11px; color: var(--muted); }
+    .readbtn {
+      margin-top: 8px; display: inline-flex; align-items: center; gap: 5px;
+      background: var(--panel-2); color: var(--text);
+      border: 1px solid var(--border); border-radius: 999px;
+      padding: 4px 12px; font-size: 15px; line-height: 1.4; cursor: pointer;
+    }
+    .readbtn:active { transform: scale(0.94); }
     .brain { display: block; margin-bottom: 6px; font-size: 11px; font-weight: 700; letter-spacing: .4px; color: #9f8bff; word-break: break-all; }
     .msg.error .brain { color: #ffb4c0; }
     .empty { margin: auto; text-align: center; color: var(--muted); max-width: 320px; }
@@ -146,8 +153,9 @@
       <select id="voice"></select>
       <button class="btn secondary" id="testVoice" type="button" style="margin-top:8px">▶ Hear this voice</button>
       <p class="hint" id="voiceHint">
-        Uses the voices built into your phone (free). Tap the 🔈 button up top to
-        turn the voice on or off.
+        Every answer has a 🔊 button — tap it to hear just that message, tap
+        again to stop. Or tap the 🔈 up top to auto-read every new answer.
+        Uses the voices built into your phone (free).
       </p>
 
       <button class="btn" id="saveKey">Save & start</button>
