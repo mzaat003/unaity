@@ -1,0 +1,473 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>Turn On unaity</title>
+<style>
+  :root {
+    --paper: #f4f1ea;
+    --ink: #17151a;
+    --panel: #fffefb;
+    --screen: #ffffff;
+    --screen-ink: #1b1a1f;
+    --screen-sub: #8a8790;
+    --screen-line: #e8e4db;
+    --muted: #57525d;
+
+    --purple: #7c5cff;
+    --blue: #2f6bff;
+    --yellow: #ffd23f;
+    --red: #ff5a5f;
+    --green: #24c187;
+    --halftone: rgba(124,92,255,.13);
+
+    --comic: "Comic Sans MS", "Comic Neue", "Chalkboard SE", "Segoe Print", "Bradley Hand", cursive;
+    --pow: "Impact", "Haettenschweiler", "Franklin Gothic Bold", "Arial Black", sans-serif;
+  }
+  :root:not([data-theme="light"]) {
+    @media (prefers-color-scheme: dark) {
+      --paper: #131019;
+      --ink: #f2eee7;
+      --panel: #1e1b26;
+      --screen: #100e15;
+      --screen-ink: #f1eee8;
+      --screen-sub: #928da0;
+      --screen-line: #2c2734;
+      --muted: #a49fb0;
+      --halftone: rgba(124,92,255,.22);
+    }
+  }
+  :root[data-theme="dark"] {
+    --paper: #131019;
+    --ink: #f2eee7;
+    --panel: #1e1b26;
+    --screen: #100e15;
+    --screen-ink: #f1eee8;
+    --screen-sub: #928da0;
+    --screen-line: #2c2734;
+    --muted: #a49fb0;
+    --halftone: rgba(124,92,255,.22);
+  }
+
+  * { box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; }
+  body {
+    margin: 0;
+    background-color: var(--paper);
+    background-image: radial-gradient(var(--halftone) 1.6px, transparent 1.7px);
+    background-size: 16px 16px;
+    color: var(--ink);
+    font-family: var(--comic);
+    line-height: 1.5;
+    padding: 20px 14px 60px;
+  }
+  .wrap { max-width: 560px; margin: 0 auto; display: flex; flex-direction: column; gap: 22px; }
+
+  /* ---- cover ---- */
+  .cover {
+    background: var(--panel);
+    border: 4px solid var(--ink);
+    border-radius: 18px;
+    box-shadow: 8px 8px 0 var(--ink);
+    padding: 22px 20px 24px;
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+  }
+  .cover .brain { font-size: 54px; line-height: 1; margin-bottom: 6px; }
+  .cover h1 {
+    font-family: var(--pow);
+    font-weight: 400;
+    font-size: clamp(34px, 12vw, 58px);
+    letter-spacing: 1px;
+    line-height: .95;
+    margin: 4px 0 2px;
+    text-transform: uppercase;
+    text-wrap: balance;
+    color: var(--purple);
+    -webkit-text-stroke: 2px var(--ink);
+    paint-order: stroke fill;
+  }
+  .cover p { margin: 10px 4px 0; font-size: 17px; color: var(--muted); }
+  .cover .zero {
+    display: inline-block; margin-top: 14px; transform: rotate(-3deg);
+    background: var(--green); color: #05271b; border: 3px solid var(--ink);
+    border-radius: 999px; padding: 7px 16px; font-family: var(--pow);
+    letter-spacing: 1px; font-size: 20px; box-shadow: 3px 3px 0 var(--ink);
+  }
+
+  /* ---- warning ---- */
+  .warn {
+    background: var(--red); color: #fff;
+    border: 4px solid var(--ink); border-radius: 16px;
+    box-shadow: 6px 6px 0 var(--ink);
+    padding: 16px 18px; display: flex; gap: 12px; align-items: flex-start;
+  }
+  .warn .big { font-size: 34px; line-height: 1; }
+  .warn b { font-family: var(--pow); font-weight: 400; letter-spacing: .5px; font-size: 20px; text-transform: uppercase; }
+  .warn p { margin: 4px 0 0; font-size: 15.5px; }
+
+  /* ---- chapter headers ---- */
+  .chapter {
+    font-family: var(--pow); font-weight: 400; text-transform: uppercase;
+    letter-spacing: 1px; font-size: clamp(24px, 7vw, 32px);
+    text-align: center; margin: 6px 0 -4px; color: var(--ink);
+    display: flex; align-items: center; gap: 12px; justify-content: center;
+  }
+  .chapter::before, .chapter::after {
+    content: ""; height: 4px; flex: 1; background: var(--ink); border-radius: 2px; max-width: 60px;
+  }
+
+  /* ---- panel ---- */
+  .panel {
+    background: var(--panel);
+    border: 4px solid var(--ink);
+    border-radius: 16px;
+    box-shadow: 7px 7px 0 var(--ink);
+    padding: 18px 18px 20px;
+    position: relative;
+  }
+  .num {
+    position: absolute; top: -18px; left: -12px;
+    width: 46px; height: 46px; display: grid; place-items: center;
+    background: var(--yellow); color: #241c00;
+    border: 4px solid var(--ink); border-radius: 50%;
+    font-family: var(--pow); font-size: 24px;
+    box-shadow: 3px 3px 0 var(--ink); transform: rotate(-6deg);
+  }
+  .panel h3 {
+    margin: 4px 0 12px 30px;
+    font-size: 20px; line-height: 1.15; text-wrap: balance;
+  }
+  .cap { margin: 12px 2px 0; font-size: 16px; color: var(--muted); }
+  .cap b { color: var(--ink); }
+
+  /* ---- phone mockup ---- */
+  .stage { position: relative; display: flex; justify-content: center; }
+  .phone {
+    width: 210px; background: var(--ink);
+    border-radius: 22px; padding: 8px; box-shadow: 5px 5px 0 rgba(0,0,0,.18);
+  }
+  .scr {
+    background: var(--screen); color: var(--screen-ink);
+    border-radius: 15px; overflow: hidden; min-height: 158px;
+    display: flex; flex-direction: column;
+  }
+  .top {
+    display: flex; align-items: center; gap: 6px;
+    padding: 8px 10px; border-bottom: 2px solid var(--screen-line);
+    font-size: 12px; color: var(--screen-sub);
+  }
+  .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--screen-line); flex: none; }
+  .body { padding: 12px 12px 14px; display: flex; flex-direction: column; gap: 9px; flex: 1; }
+  .line { height: 9px; border-radius: 5px; background: var(--screen-line); }
+  .line.s { width: 55%; } .line.m { width: 78%; }
+  .row {
+    display: flex; align-items: center; gap: 8px; font-size: 13px;
+    padding: 8px 9px; border: 2px solid var(--screen-line); border-radius: 9px;
+    color: var(--screen-ink);
+  }
+  .row .grow { flex: 1; }
+  .chip { font-size: 12px; }
+  .btn {
+    display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+    font-family: var(--comic); font-size: 13.5px; font-weight: bold;
+    padding: 9px 12px; border-radius: 10px; border: 2px solid transparent;
+    background: var(--purple); color: #fff;
+  }
+  .btn.ghost { background: transparent; color: var(--screen-ink); border-color: var(--screen-line); }
+
+  /* highlight the thing to tap */
+  .hi {
+    background: var(--yellow) !important; color: #241c00 !important;
+    border-color: var(--ink) !important;
+    box-shadow: 0 0 0 3px var(--ink); font-weight: bold;
+  }
+  .tap {
+    position: absolute; right: -6px; top: -14px; z-index: 3;
+    background: var(--red); color: #fff; font-family: var(--pow);
+    font-size: 15px; letter-spacing: .5px; padding: 6px 11px;
+    border: 3px solid var(--ink); box-shadow: 2px 2px 0 var(--ink);
+    transform: rotate(7deg);
+    clip-path: polygon(50% 0,63% 22%,90% 12%,80% 38%,100% 50%,80% 62%,90% 88%,63% 78%,50% 100%,37% 78%,10% 88%,20% 62%,0 50%,20% 38%,10% 12%,37% 22%);
+    padding: 12px 16px;
+    animation: wiggle 1.6s ease-in-out infinite;
+  }
+  @keyframes wiggle { 0%,100%{ transform: rotate(7deg) scale(1);} 50%{ transform: rotate(2deg) scale(1.08);} }
+
+  .hero-emoji { font-size: 46px; text-align: center; }
+  .waver { animation: float 2.4s ease-in-out infinite; }
+  @keyframes float { 0%,100%{ transform: translateY(0);} 50%{ transform: translateY(-7px);} }
+
+  /* ---- link cards ---- */
+  .links { display: flex; flex-direction: column; gap: 14px; }
+  .linkcard {
+    background: var(--panel); border: 4px solid var(--ink); border-radius: 16px;
+    box-shadow: 6px 6px 0 var(--ink); padding: 15px 16px;
+  }
+  .linkcard .k { font-family: var(--pow); font-size: 15px; letter-spacing: .5px; text-transform: uppercase; color: var(--purple); }
+  .linkcard .u {
+    display: block; margin-top: 6px; font-family: ui-monospace, "SFMono-Regular", Menlo, monospace;
+    font-size: 15px; word-break: break-all; color: var(--ink); text-decoration: none;
+    background: var(--screen); border: 2px dashed var(--screen-line); border-radius: 9px; padding: 9px 10px;
+  }
+  .linkcard small { display: block; margin-top: 8px; color: var(--muted); font-size: 14px; }
+
+  .finish {
+    text-align: center; background: var(--green); color: #05271b;
+    border: 4px solid var(--ink); border-radius: 16px; box-shadow: 7px 7px 0 var(--ink);
+    padding: 20px;
+  }
+  .finish b { font-family: var(--pow); font-weight: 400; font-size: clamp(22px,6vw,28px); letter-spacing: .5px; text-transform: uppercase; }
+  .finish p { margin: 8px 0 0; font-size: 16px; }
+
+  @media (prefers-reduced-motion: reduce) {
+    .tap, .waver { animation: none; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <!-- COVER -->
+  <div class="cover">
+    <div class="brain waver">🧠</div>
+    <h1>Turn On unaity</h1>
+    <p>Two easy parts. Big buttons. No money — ever.<br>Just follow the numbers. 👇</p>
+    <div class="zero">💸 $0.00 FOREVER</div>
+  </div>
+
+  <!-- WARNING -->
+  <div class="warn">
+    <div class="big">🙈</div>
+    <div>
+      <b>Oops — one tiny thing first</b>
+      <p>You showed me your key in the chat, so it’s not a secret anymore. No biggie! We just throw it away and make a fresh one. That’s Steps 1–2 below.</p>
+    </div>
+  </div>
+
+  <!-- CHAPTER 1 -->
+  <div class="chapter">🔑 Make your key</div>
+
+  <div class="panel">
+    <div class="num">1</div>
+    <h3>Open the key page</h3>
+    <div class="stage">
+      <div class="phone"><div class="scr">
+        <div class="top"><span class="dot"></span> openrouter.ai/keys</div>
+        <div class="body">
+          <div class="line m"></div><div class="line s"></div>
+          <div class="row"><span class="chip">🔑</span><span class="grow">Your keys</span></div>
+        </div>
+      </div></div>
+    </div>
+    <p class="cap">On your phone’s browser, go to <b>openrouter.ai/keys</b>. Log in if it asks (the Google button is easy).</p>
+  </div>
+
+  <div class="panel">
+    <div class="num">2</div>
+    <h3>Throw the old key away</h3>
+    <div class="stage">
+      <div class="phone"><div class="scr">
+        <div class="top"><span class="dot"></span> Your keys</div>
+        <div class="body">
+          <div class="row"><span class="grow">sk-or-•••• (old)</span><span class="hi chip" style="padding:6px 9px;border-radius:8px">🗑️</span></div>
+          <div class="line s"></div>
+        </div>
+      </div></div>
+      <span class="tap">TAP!</span>
+    </div>
+    <p class="cap">Find the key you already made and tap the <b>🗑️ trash can</b> next to it. <b>Bye-bye, old key!</b></p>
+  </div>
+
+  <div class="panel">
+    <div class="num">3</div>
+    <h3>Make a brand-new key</h3>
+    <div class="stage">
+      <div class="phone"><div class="scr">
+        <div class="top"><span class="dot"></span> Your keys</div>
+        <div class="body">
+          <div class="line s"></div>
+          <div class="btn hi" style="align-self:flex-start">＋ Create Key</div>
+          <div class="row"><span class="grow">Name: unaity</span></div>
+        </div>
+      </div></div>
+      <span class="tap">TAP!</span>
+    </div>
+    <p class="cap">Tap <b>＋ Create Key</b>. Type a name like <b>unaity</b>. Then tap the create button.</p>
+  </div>
+
+  <div class="panel">
+    <div class="num">4</div>
+    <h3>Copy it &amp; keep it safe</h3>
+    <div class="stage">
+      <div class="phone"><div class="scr">
+        <div class="top"><span class="dot"></span> New key 🎉</div>
+        <div class="body">
+          <div class="row"><span class="grow">sk-or-•••••••••</span><span class="hi chip" style="padding:6px 9px;border-radius:8px">📋 Copy</span></div>
+          <div class="line m"></div>
+        </div>
+      </div></div>
+      <span class="tap">TAP!</span>
+    </div>
+    <p class="cap">Tap <b>📋 Copy</b>. Now paste it into your <b>Notes app</b> so you don’t lose it. Keep it secret — treat it like a password! (Don’t paste it back to me. 🤫)</p>
+  </div>
+
+  <div class="panel">
+    <div class="num">5</div>
+    <h3>Lock the money at $0</h3>
+    <div class="stage">
+      <div class="phone"><div class="scr">
+        <div class="top"><span class="dot"></span> Settings › Credits</div>
+        <div class="body">
+          <div class="row"><span class="grow">Spend limit</span><span class="hi chip" style="padding:6px 10px;border-radius:8px">$0</span></div>
+          <div class="line s"></div>
+          <div class="row" style="border-color:var(--green);color:var(--green)"><span class="grow">🛡️ Free models only</span>✓</div>
+        </div>
+      </div></div>
+    </div>
+    <p class="cap">Go to <b>Settings → Credits</b> and set your limit to <b>$0</b>. Now it can <b>never</b> cost you a penny. 🛡️</p>
+  </div>
+
+  <!-- CHAPTER 2 -->
+  <div class="chapter">🌐 Turn the site on</div>
+
+  <div class="panel">
+    <div class="num">6</div>
+    <h3>Open your project</h3>
+    <div class="stage">
+      <div class="phone"><div class="scr">
+        <div class="top"><span class="dot"></span> github.com/…/unaity</div>
+        <div class="body">
+          <div class="row"><span class="chip">📦</span><span class="grow">mzaat003 / unaity</span></div>
+          <div class="line m"></div><div class="line s"></div>
+        </div>
+      </div></div>
+    </div>
+    <p class="cap">In your browser, go to <b>github.com/mzaat003/unaity</b>.</p>
+  </div>
+
+  <div class="panel">
+    <div class="num">7</div>
+    <h3>Tap “Settings”</h3>
+    <div class="stage">
+      <div class="phone"><div class="scr">
+        <div class="top"><span class="dot"></span> unaity</div>
+        <div class="body">
+          <div class="row"><span class="grow">＜＞ Code</span></div>
+          <div class="row hi"><span class="chip">⚙️</span><span class="grow">Settings</span></div>
+        </div>
+      </div></div>
+      <span class="tap">TAP!</span>
+    </div>
+    <p class="cap">Tap the <b>⚙️ Settings</b> tab. (On a phone it may hide under a “•••” or a menu button at the top.)</p>
+  </div>
+
+  <div class="panel">
+    <div class="num">8</div>
+    <h3>Tap “Pages”</h3>
+    <div class="stage">
+      <div class="phone"><div class="scr">
+        <div class="top"><span class="dot"></span> Settings</div>
+        <div class="body">
+          <div class="row"><span class="grow">General</span></div>
+          <div class="row hi"><span class="chip">📄</span><span class="grow">Pages</span></div>
+          <div class="row"><span class="grow">Actions</span></div>
+        </div>
+      </div></div>
+      <span class="tap">TAP!</span>
+    </div>
+    <p class="cap">Scroll the menu and tap <b>Pages</b>.</p>
+  </div>
+
+  <div class="panel">
+    <div class="num">9</div>
+    <h3>Pick “GitHub Actions”</h3>
+    <div class="stage">
+      <div class="phone"><div class="scr">
+        <div class="top"><span class="dot"></span> Pages</div>
+        <div class="body">
+          <div class="chip" style="color:var(--screen-sub);font-size:12px">Source</div>
+          <div class="row hi"><span class="grow">GitHub Actions</span><span>▾</span></div>
+          <div class="line s"></div>
+        </div>
+      </div></div>
+      <span class="tap">PICK!</span>
+    </div>
+    <p class="cap">Under <b>Source</b>, tap the box and choose <b>GitHub Actions</b>. That’s the magic switch! ✨</p>
+  </div>
+
+  <div class="panel">
+    <div class="num">10</div>
+    <h3>Tell me “done”</h3>
+    <div class="stage">
+      <div class="hero-emoji waver">🧠💬</div>
+    </div>
+    <p class="cap">That’s it — you did the hard part! Come back to our chat and just type <b>“done”</b>. Then it’s my turn. 👇</p>
+  </div>
+
+  <!-- CHAPTER 3 -->
+  <div class="chapter">🚀 Then the magic</div>
+
+  <div class="panel">
+    <div class="num">11</div>
+    <h3>I flip the big switch</h3>
+    <div class="stage"><div class="hero-emoji">🤖⚡</div></div>
+    <p class="cap">When you say “done”, <b>I</b> build and turn your site on for you. You don’t do anything here — just wait a minute.</p>
+  </div>
+
+  <div class="panel">
+    <div class="num">12</div>
+    <h3>Open your link, paste your key</h3>
+    <div class="stage">
+      <div class="phone"><div class="scr">
+        <div class="top"><span class="dot"></span> your unaity site</div>
+        <div class="body">
+          <div class="chip" style="font-size:12px;color:var(--screen-sub)">Paste your key</div>
+          <div class="row"><span class="grow">sk-or-•••••••</span></div>
+          <div class="btn hi" style="align-self:stretch">Save &amp; start</div>
+        </div>
+      </div></div>
+    </div>
+    <p class="cap">Open your link (below), paste your key <b>one time</b>, tap <b>Save &amp; start</b>. It remembers it on your phone.</p>
+  </div>
+
+  <div class="panel">
+    <div class="num">13</div>
+    <h3>Chat with lots of AIs 🎉</h3>
+    <div class="stage">
+      <div class="phone"><div class="scr">
+        <div class="top"><span class="dot"></span> unaity</div>
+        <div class="body">
+          <div class="row" style="align-self:flex-end;background:var(--blue);color:#fff;border:0">hi!</div>
+          <div class="row" style="align-self:flex-start">Hello! 🧠</div>
+          <div class="line s"></div>
+        </div>
+      </div></div>
+    </div>
+    <p class="cap">Done! You can now talk to many AIs through one app — on any phone or laptop — for <b>free</b>. 🥳</p>
+  </div>
+
+  <!-- LINKS -->
+  <div class="links">
+    <div class="linkcard">
+      <div class="k">🔑 Link 1 · get your key</div>
+      <a class="u" href="https://openrouter.ai/keys" target="_blank" rel="noopener">openrouter.ai/keys</a>
+      <small>Do this first (Steps 1–5). Free, no card.</small>
+    </div>
+    <div class="linkcard">
+      <div class="k">🌐 Link 2 · your website</div>
+      <a class="u" href="https://mzaat003.github.io/unaity/" target="_blank" rel="noopener">mzaat003.github.io/unaity/</a>
+      <small>Turns on after you flip the switch (Steps 6–10) and I deploy it.</small>
+    </div>
+  </div>
+
+  <div class="finish">
+    <b>Your turn! Do steps 1–10,<br>then type “done”. 🚀</b>
+    <p>I’ll take it from there and turn your site on.</p>
+  </div>
+
+</div>
+</body>
+</html>

@@ -85,8 +85,8 @@
     .card h2 { margin: 0 0 6px; font-size: 20px; }
     .card p { margin: 6px 0 14px; color: var(--muted); font-size: 14px; }
     .card label { display: block; font-size: 13px; margin: 12px 0 6px; color: var(--muted); }
-    .card input[type=password], .card input[type=text] {
-      width: 100%; background: var(--panel-2); color: var(--text);
+    .card input[type=password], .card input[type=text], .card select {
+      width: 100%; max-width: 100%; background: var(--panel-2); color: var(--text);
       border: 1px solid var(--border); border-radius: 10px; padding: 11px 12px; font: inherit;
     }
     .card .row { display: flex; align-items: center; gap: 8px; margin-top: 14px; font-size: 14px; }
@@ -105,6 +105,7 @@
     <div class="logo">U</div>
     <h1>unaity</h1>
     <select id="model" title="Model"></select>
+    <button class="iconbtn" id="speaker" title="Read answers aloud" aria-label="Voice on or off">🔈</button>
     <button class="iconbtn" id="gear" title="Settings" aria-label="Settings">⚙️</button>
   </header>
 
@@ -140,6 +141,15 @@
         <input type="checkbox" id="compare" />
         <label for="compare" style="margin:0;color:var(--text)">Compare mode — ask 3 models at once</label>
       </div>
+
+      <label for="voice">🔊 Voice — read answers aloud</label>
+      <select id="voice"></select>
+      <button class="btn secondary" id="testVoice" type="button" style="margin-top:8px">▶ Hear this voice</button>
+      <p class="hint" id="voiceHint">
+        Uses the voices built into your phone (free). Tap the 🔈 button up top to
+        turn the voice on or off.
+      </p>
+
       <button class="btn" id="saveKey">Save & start</button>
       <button class="btn secondary" id="closeSettings" style="display:none">Close</button>
       <button class="btn secondary" id="forget" style="display:none">Forget key (sign out)</button>
