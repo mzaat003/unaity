@@ -1,1 +1,144 @@
 # unaity
+
+**One brain across many AIs.** `unaity` is a small router that takes a single
+prompt and dispatches it to whichever AI provider you want — through each
+provider's **official API** — and automatically falls back to the next one when
+a provider is rate-limited or down.
+
+Instead of juggling dozens of separate website logins, you sign up **once** per
+provider, create **one API key** each, and get access to hundreds of models
+behind a single endpoint.
+
+```
+your app / CLI  ->  unaity router  ->  ┌─ OpenRouter (100s of models, many free)
+                                       ├─ Groq       (free, very fast)
+                                       ├─ Gemini     (free API tier)
+                                       └─ Ollama     (local, unlimited, no key)
+```
+
+## Why API keys instead of many accounts
+
+The website login pages for these services aren't meant to be driven by code —
+they're guarded by CAPTCHAs and verification, and scripting mass signups
+violates their terms. The **API** is the sanctioned, stable path: one account,
+one key, as many calls as the plan allows. Several providers give this away for
+free, so you get breadth without farming accounts.
+
+## Setup
+
+Requires **Node.js 18+** (uses built-in `fetch`).
+
+```bash
+npm install
+cp .env.example .env
+```
+
+Then open `.env` and paste in the keys you want. You only need **one** to start.
+Create each key by hand (links are in `.env.example`):
+
+| Provider   | Free tier | Get a key |
+|------------|-----------|-----------|
+| OpenRouter | many free models | https://openrouter.ai/keys |
+| Gemini     | generous free API | https://aistudio.google.com/apikey |
+| Groq       | free            | https://console.groq.com/keys |
+| Ollama     | fully local, no key | https://ollama.com |
+
+> A single dedicated Google account for these signups (to keep them out of your
+> personal inbox) is perfectly fine. What unaity does **not** do is create
+> accounts for you or automate signups — you make each account/key yourself, once.
+
+## Use it
+
+**Command line:**
+
+```bash
+npm run ask -- "explain quantum entanglement simply"
+npm run ask -- --provider groq "write a haiku about the sea"
+npm run ask -- --model "google/gemini-2.0-flash-exp:free" "hello"
+```
+
+**HTTP server:**
+
+```bash
+npm start
+# then, from anywhere:
+curl -s localhost:3000/chat \
+  -H 'content-type: application/json' \
+  -d '{"prompt":"give me three startup ideas"}'
+```
+
+**Streaming:** the web UI and CLI stream replies word-by-word automatically.
+For your own integrations, `POST /chat/stream` returns Server-Sent Events —
+`{"delta": "..."}` chunks followed by `{"done": true, "provider": "...", "model": "..."}`
+(or `{"error": "..."}`). Plain `POST /chat` stays available for simple
+request/response use.
+
+Check what's wired up:
+
+```bash
+curl -s localhost:3000/health
+# { "ok": true, "providers": ["openrouter","groq"] }
+```
+
+## Web app + Android app (same thing, free)
+
+`unaity` ships a mobile-friendly chat UI that is also an installable **PWA**
+(Progressive Web App). Start the server and open it in any browser:
+
+```bash
+npm start
+# open http://localhost:3000  (works on any phone or laptop on your network)
+```
+
+- **On a laptop:** open the URL in Chrome/Edge/Safari — that's your web version.
+- **On Android:** open the URL in Chrome, tap the **⋮ menu → "Install app"** (or
+  "Add to Home screen"). It lands on your home screen and runs fullscreen like a
+  native app. **No Play Store, no fee, no separate codebase** — one app, everywhere.
+- **On iPhone:** Share → "Add to Home Screen" does the same thing.
+
+To reach it from your phone while the server runs on your laptop, both on the
+same Wi-Fi, use the laptop's LAN IP (e.g. `http://192.168.1.20:3000`).
+
+### Make it reachable from anywhere (free)
+
+The API-only providers (OpenRouter, Groq, Gemini) work from any host, so you can
+deploy the server to a free tier and reach it from any device, anywhere:
+
+- **Render**, **Railway**, or **Fly.io** free tiers — push this repo, set your
+  keys as environment variables, done.
+- **Cloudflare Tunnel** / **ngrok** — expose your laptop's `localhost:3000`
+  publicly for free without deploying.
+
+> Note: **Ollama** (local models) only runs where it's installed, so it won't be
+> available on a cloud host — the router just falls past it to the API providers.
+
+## How routing works
+
+The `PROVIDER_ORDER` in `.env` sets the priority. The router tries the first
+configured provider; if it errors or is rate-limited, it moves to the next,
+and reports which one actually answered. Force a specific one with
+`--provider` (CLI) or `"provider"` (HTTP).
+
+## Layout
+
+```
+src/
+  router.js          the brain: provider selection + fallback
+  server.js          HTTP endpoint + serves the web app (/chat, /health)
+  cli.js             command-line entry point
+  providers/
+    openrouter.js    each file wraps one official API behind chat()
+    groq.js
+    gemini.js
+    ollama.js
+public/              the installable web app (PWA)
+  index.html         mobile-first chat UI
+  app.js             frontend logic (calls /chat, keeps context)
+  manifest.webmanifest  + service-worker.js  -> installable on Android/iOS
+  icon-192.png / icon-512.png
+scripts/
+  gen-icons.mjs      regenerates the icons (dependency-free PNG writer)
+```
+
+Adding a provider is one file: export `name`, `defaultModel`, `isConfigured()`,
+and `chat({ messages, model, signal })`, then list it in `src/router.js`.

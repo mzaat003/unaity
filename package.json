@@ -1,0 +1,18 @@
+{
+  "name": "unaity",
+  "version": "0.1.0",
+  "description": "One brain: a router that dispatches a single prompt across many AI providers via their official APIs, with automatic fallback.",
+  "type": "module",
+  "main": "src/server.js",
+  "scripts": {
+    "start": "node src/server.js",
+    "ask": "node src/cli.js"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "dotenv": "^16.4.5",
+    "express": "^4.19.2"
+  }
+}
