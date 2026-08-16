@@ -16,6 +16,32 @@ your app / CLI  ->  unaity router  ->  ┌─ OpenRouter (100s of models, many f
                                        └─ Ollama     (local, unlimited, no key)
 ```
 
+## Launch it
+
+There are two ways to run unaity. Both are free. Pick one:
+
+**A) On your own computer** (fastest — 2 minutes):
+
+```bash
+npm install
+cp .env.example .env          # then paste ONE free key into .env
+npm start                     # open http://localhost:3000
+```
+
+Open that URL in any browser on the same Wi-Fi (use your computer's LAN IP,
+e.g. `http://192.168.1.20:3000`, from your phone). On Android, Chrome's
+**⋮ → Install app** turns it into a home-screen app.
+
+**B) On free hosting** (reachable from anywhere, no computer left running):
+
+This repo ships a `render.yaml`, so on [Render](https://render.com) you can go
+**New → Blueprint → pick this repo**, paste one key when prompted, and Render
+gives you a public `https://…` URL that works on every device. A `Dockerfile`
+is also included for Railway, Fly.io, Cloud Run, or any Docker host.
+
+> Either way you need **one** provider key first (they're free — see the table
+> below). unaity never creates accounts for you; you make one key by hand, once.
+
 ## Why API keys instead of many accounts
 
 The website login pages for these services aren't meant to be driven by code —

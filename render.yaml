@@ -1,0 +1,23 @@
+# One-click deploy to Render's free tier.
+# 1. Push this repo to GitHub (already done if you're reading this there).
+# 2. Go to https://render.com -> New -> Blueprint -> pick this repo.
+# 3. When prompted, paste in at least one provider key (see envVars below).
+# 4. Render builds and gives you a public https URL that works on any device.
+services:
+  - type: web
+    name: unaity
+    runtime: node
+    plan: free
+    buildCommand: npm install
+    startCommand: npm start
+    envVars:
+      # Fill in at least one of these in the Render dashboard. Leave the rest
+      # blank. They are marked sync:false so they are NOT stored in the repo.
+      - key: OPENROUTER_API_KEY
+        sync: false
+      - key: GROQ_API_KEY
+        sync: false
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: PROVIDER_ORDER
+        value: openrouter,groq,gemini
