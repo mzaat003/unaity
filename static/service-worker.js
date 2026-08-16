@@ -1,6 +1,6 @@
 // Caches the app shell so unaity is installable and loads offline. API calls
 // to OpenRouter always go to the network (never cached).
-const CACHE = "unaity-static-v1";
+const CACHE = "unaity-static-v2";
 const SHELL = [
   "./",
   "./index.html",

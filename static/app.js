@@ -7,6 +7,8 @@ const OR_BASE = "https://openrouter.ai/api/v1";
 const LS_KEY = "unaity.key";
 const LS_MODEL = "unaity.model";
 const LS_COMPARE = "unaity.compare";
+const LS_SPEAK = "unaity.speak";
+const LS_VOICE = "unaity.voice";
 
 // Used only if the live model list can't be fetched. IDs may drift over time;
 // the live list (fetched below) is preferred.
@@ -96,6 +98,95 @@ modelSel.addEventListener("change", () =>
   localStorage.setItem(LS_MODEL, modelSel.value)
 );
 
+// ---- voice (free, uses the phone's built-in voices) ------------------------
+const synth = window.speechSynthesis || null;
+const voiceSel = $("voice");
+const speakerBtn = $("speaker");
+let voices = [];
+
+// Names commonly used for female voices across iOS / Android / Windows.
+const FEMALE_HINT = /(female|woman|samantha|karen|moira|tessa|fiona|victoria|serena|allison|ava|susan|zira|hazel|catherine|amelie|amélie|joana|paulina|luciana|monica|mónica|google uk english female|google us english female|nicky|aria|jenny|sonia|libby|natasha|clara|elsa|isha|swara|salli|joanna|kendra|kimberly|ivy|emma|amy)/i;
+
+const isFemale = (v) => FEMALE_HINT.test(v.name);
+const isEnglish = (v) => /^en(-|_|$)/i.test(v.lang);
+
+function labelVoice(v) {
+  const region = (v.lang || "").replace("_", "-");
+  return `${v.name} (${region})${isFemale(v) ? " ♀" : ""}`;
+}
+
+function loadVoices() {
+  if (!synth) return;
+  const all = synth.getVoices();
+  if (!all.length) return; // will fire again via onvoiceschanged
+  // Order: English female first, then other female, then the rest.
+  voices = all.slice().sort((a, b) => {
+    const score = (v) => (isFemale(v) ? 0 : 2) + (isEnglish(v) ? 0 : 1);
+    return score(a) - score(b);
+  });
+
+  voiceSel.innerHTML = "";
+  for (const v of voices) {
+    const opt = document.createElement("option");
+    opt.value = v.name;
+    opt.textContent = labelVoice(v);
+    voiceSel.appendChild(opt);
+  }
+  const saved = localStorage.getItem(LS_VOICE);
+  if (saved && voices.some((v) => v.name === saved)) {
+    voiceSel.value = saved;
+  } else {
+    // Default to the first (best) female English voice we found.
+    const def = voices.find((v) => isFemale(v) && isEnglish(v)) || voices[0];
+    if (def) { voiceSel.value = def.name; localStorage.setItem(LS_VOICE, def.name); }
+  }
+}
+
+if (synth) {
+  loadVoices();
+  synth.onvoiceschanged = loadVoices;
+} else if (voiceSel) {
+  // No speech support on this browser — hide the controls gracefully.
+  voiceSel.disabled = true;
+  const hint = $("voiceHint");
+  if (hint) hint.textContent = "Your browser doesn't support voice output.";
+}
+
+voiceSel && voiceSel.addEventListener("change", () =>
+  localStorage.setItem(LS_VOICE, voiceSel.value)
+);
+
+const speakOn = () => localStorage.getItem(LS_SPEAK) === "1";
+function refreshSpeakerBtn() {
+  if (!speakerBtn) return;
+  const on = speakOn();
+  speakerBtn.textContent = on ? "🔊" : "🔈";
+  speakerBtn.title = on ? "Voice ON — tap to mute" : "Voice OFF — tap to turn on";
+}
+speakerBtn && speakerBtn.addEventListener("click", () => {
+  localStorage.setItem(LS_SPEAK, speakOn() ? "0" : "1");
+  if (!speakOn() && synth) synth.cancel(); // just turned off → stop talking
+  refreshSpeakerBtn();
+});
+refreshSpeakerBtn();
+
+// Speak text with the chosen voice. `force` ignores the on/off toggle
+// (used by the Test button so you can preview a voice while muted).
+function speak(text, force) {
+  if (!synth || (!speakOn() && !force)) return;
+  if (!text || !text.trim()) return;
+  synth.cancel();
+  const u = new SpeechSynthesisUtterance(text.slice(0, 4000));
+  const chosen = voices.find((v) => v.name === (voiceSel && voiceSel.value));
+  if (chosen) { u.voice = chosen; u.lang = chosen.lang; }
+  u.rate = 1; u.pitch = 1;
+  synth.speak(u);
+}
+
+$("testVoice") && $("testVoice").addEventListener("click", () =>
+  speak("Hi! This is how I'll read your answers out loud.", true)
+);
+
 // ---- rendering -------------------------------------------------------------
 function addMessage(text, cls, via) {
   if (empty && empty.parentNode) empty.remove();
@@ -180,6 +271,7 @@ async function sendOne(typing) {
     v.textContent = `— ${model.replace(/:free$/, "")}`;
     botEl.appendChild(v);
     history.push({ role: "assistant", content: text });
+    speak(text);
     return true;
   } catch (err) {
     typing.remove();
@@ -226,7 +318,11 @@ async function sendAll(typing) {
         })
     )
   );
-  if (winner) { history.push({ role: "assistant", content: winner }); return true; }
+  if (winner) {
+    history.push({ role: "assistant", content: winner });
+    speak(winner); // read the fastest answer aloud
+    return true;
+  }
   return false;
 }
 
@@ -258,6 +354,7 @@ form.addEventListener("submit", async (e) => {
   const text = input.value.trim();
   if (!text) return;
 
+  if (synth) synth.cancel(); // stop reading the previous answer
   addMessage(text, "user");
   history.push({ role: "user", content: text });
   input.value = "";
