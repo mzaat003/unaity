@@ -12,10 +12,12 @@ function baseUrl() {
   return process.env.OLLAMA_BASE_URL || "http://localhost:11434";
 }
 
-// Treated as "configured" whenever a base URL is set. It may still fail at
-// call time if Ollama isn't actually running — the router falls past it then.
+// Opt-in: only considered configured when OLLAMA_BASE_URL is explicitly set
+// (set it to http://localhost:11434 to use a local install). This keeps a
+// fresh, unconfigured install from advertising a provider that isn't running,
+// so users get the clear "add a key" message instead of a fetch error.
 export function isConfigured() {
-  return Boolean(baseUrl());
+  return Boolean(process.env.OLLAMA_BASE_URL);
 }
 
 export async function chat({ messages, model, signal }) {

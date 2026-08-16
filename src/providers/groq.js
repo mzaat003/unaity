@@ -3,18 +3,23 @@
 
 import { sseData } from "./stream-util.js";
 
-const BASE_URL = "https://api.groq.com/openai/v1/chat/completions";
-
 export const name = "groq";
 
 export const defaultModel = "llama-3.3-70b-versatile";
+
+// Base can be pointed at any OpenAI-compatible endpoint. Read at call time so
+// env changes and tests take effect.
+function completionsUrl() {
+  const base = process.env.GROQ_BASE_URL || "https://api.groq.com/openai/v1";
+  return `${base.replace(/\/$/, "")}/chat/completions`;
+}
 
 export function isConfigured() {
   return Boolean(process.env.GROQ_API_KEY);
 }
 
 export async function chat({ messages, model, signal }) {
-  const res = await fetch(BASE_URL, {
+  const res = await fetch(completionsUrl(), {
     method: "POST",
     signal,
     headers: {
@@ -38,7 +43,7 @@ export async function chat({ messages, model, signal }) {
 
 // Yields text deltas as they arrive (OpenAI-style SSE).
 export async function* stream({ messages, model, signal }) {
-  const res = await fetch(BASE_URL, {
+  const res = await fetch(completionsUrl(), {
     method: "POST",
     signal,
     headers: {

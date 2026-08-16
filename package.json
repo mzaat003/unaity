@@ -6,7 +6,8 @@
   "main": "src/server.js",
   "scripts": {
     "start": "node src/server.js",
-    "ask": "node src/cli.js"
+    "ask": "node src/cli.js",
+    "test": "node --test \"test/**/*.test.mjs\""
   },
   "engines": {
     "node": ">=18"
