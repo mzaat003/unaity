@@ -55,6 +55,7 @@ Create each key by hand (links are in `.env.example`):
 npm run ask -- "explain quantum entanglement simply"
 npm run ask -- --provider groq "write a haiku about the sea"
 npm run ask -- --model "google/gemini-2.0-flash-exp:free" "hello"
+npm run ask -- --all "which of you explains recursion best?"   # ask every brain
 ```
 
 **HTTP server:**
@@ -118,6 +119,18 @@ The `PROVIDER_ORDER` in `.env` sets the priority. The router tries the first
 configured provider; if it errors or is rate-limited, it moves to the next,
 and reports which one actually answered. Force a specific one with
 `--provider` (CLI) or `"provider"` (HTTP).
+
+## Ask all brains at once
+
+Pick **🧠 All brains** in the web app's dropdown (or `--all` on the CLI) to fan
+one prompt out to **every configured provider in parallel**. Each brain streams
+its answer into its own card side by side, so you can compare them; the first to
+finish is tagged ⚡ and its answer is kept as conversation context.
+
+For your own integrations, `POST /chat/all` returns one SSE stream multiplexing
+all providers: `{"provider","model","delta"}` chunks, `{"provider","done"}` per
+provider, and a final `{"allDone":true,"results":[...]}`. Providers that fail
+send `{"provider","error"}` without stopping the others.
 
 ## Layout
 

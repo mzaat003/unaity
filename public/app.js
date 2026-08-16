@@ -1,5 +1,6 @@
-// Frontend for unaity: talks to the /chat and /health endpoints, keeps the
-// running conversation for context, and shows which provider answered.
+// Frontend for unaity: talks to the /chat/stream and /chat/all endpoints,
+// keeps the running conversation for context, and shows which provider
+// answered. "All brains" mode streams every provider side by side.
 
 const chat = document.getElementById("chat");
 const empty = document.getElementById("empty");
@@ -55,6 +56,151 @@ function addTyping() {
   return el;
 }
 
+// Read an SSE response body, calling onEvent(parsedJson) per `data:` event.
+async function readSse(res, onEvent) {
+  const reader = res.body.getReader();
+  const decoder = new TextDecoder();
+  let buf = "";
+  for (;;) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    buf += decoder.decode(value, { stream: true });
+    const events = buf.split("\n\n");
+    buf = events.pop();
+    for (const event of events) {
+      const line = event.trim();
+      if (!line.startsWith("data:")) continue;
+      if (onEvent(JSON.parse(line.slice(5))) === false) return;
+    }
+  }
+}
+
+// --- single-brain streaming (default and forced-provider modes) ---
+async function streamOne(typing) {
+  let botEl = null;
+  let botText = "";
+
+  const appendDelta = (delta) => {
+    if (!botEl) {
+      typing.remove();
+      botEl = addMessage("", "bot");
+    }
+    botText += delta;
+    botEl.textContent = botText;
+    chat.scrollTop = chat.scrollHeight;
+  };
+
+  const res = await fetch("./chat/stream", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      messages: history,
+      provider: providerSel.value || undefined,
+    }),
+  });
+
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({}));
+    typing.remove();
+    addMessage(data.error || "Something went wrong.", "error");
+    return;
+  }
+
+  let finished = false;
+  await readSse(res, (data) => {
+    if (data.delta) {
+      appendDelta(data.delta);
+    } else if (data.done) {
+      if (!botEl) appendDelta("(empty response)");
+      const v = document.createElement("span");
+      v.className = "via";
+      v.textContent = `— via ${data.provider} · ${data.model}`;
+      botEl.appendChild(v);
+      history.push({ role: "assistant", content: botText });
+      finished = true;
+      return false;
+    } else if (data.error) {
+      typing.remove();
+      addMessage(data.error, "error");
+      finished = true;
+      return false;
+    }
+  });
+
+  if (!finished && !botEl) {
+    typing.remove();
+    addMessage("Connection dropped before a reply arrived.", "error");
+  }
+}
+
+// --- "ask all brains at once": one card per provider, streaming in parallel ---
+async function streamAll(typing) {
+  const cards = {}; // provider -> {el, textNode, text}
+  let winner = null; // first provider to finish successfully
+
+  const ensureCard = (provider, model) => {
+    if (cards[provider]) return cards[provider];
+    typing.remove();
+    const el = document.createElement("div");
+    el.className = "msg bot";
+    const label = document.createElement("span");
+    label.className = "brain";
+    label.textContent = `${provider} · ${model}`;
+    const textNode = document.createElement("span");
+    el.appendChild(label);
+    el.appendChild(textNode);
+    chat.appendChild(el);
+    cards[provider] = { el, textNode, text: "" };
+    chat.scrollTop = chat.scrollHeight;
+    return cards[provider];
+  };
+
+  const res = await fetch("./chat/all", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ messages: history }),
+  });
+
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({}));
+    typing.remove();
+    addMessage(data.error || "Something went wrong.", "error");
+    return;
+  }
+
+  await readSse(res, (data) => {
+    if (data.delta) {
+      const card = ensureCard(data.provider, data.model);
+      card.text += data.delta;
+      card.textNode.textContent = card.text;
+      chat.scrollTop = chat.scrollHeight;
+    } else if (data.done && data.provider) {
+      const card = ensureCard(data.provider, data.model);
+      if (!winner && card.text) {
+        winner = { provider: data.provider, text: card.text };
+        card.el.querySelector(".brain").textContent += "  ⚡ fastest";
+      }
+    } else if (data.error && data.provider) {
+      const card = ensureCard(data.provider, data.model);
+      card.el.classList.add("error");
+      card.textNode.textContent = card.text || data.error;
+    } else if (data.allDone) {
+      // Keep the fastest successful answer as conversation context.
+      if (winner) history.push({ role: "assistant", content: winner.text });
+      return false;
+    } else if (data.error) {
+      typing.remove();
+      addMessage(data.error, "error");
+      return false;
+    }
+  });
+
+  if (!Object.keys(cards).length) {
+    typing.remove();
+    addMessage("No brains answered.", "error");
+  }
+}
+
 // Auto-grow the textarea.
 input.addEventListener("input", () => {
   input.style.height = "auto";
@@ -81,76 +227,11 @@ form.addEventListener("submit", async (e) => {
   send.disabled = true;
 
   const typing = addTyping();
-  let botEl = null; // created on the first streamed chunk
-  let botText = "";
-
-  const appendDelta = (delta) => {
-    if (!botEl) {
-      typing.remove();
-      botEl = addMessage("", "bot");
-    }
-    botText += delta;
-    botEl.textContent = botText;
-    chat.scrollTop = chat.scrollHeight;
-  };
-
   try {
-    const res = await fetch("./chat/stream", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        messages: history,
-        provider: providerSel.value || undefined,
-      }),
-    });
-
-    if (!res.ok) {
-      // Non-SSE failure (e.g. validation error) comes back as plain JSON.
-      const data = await res.json().catch(() => ({}));
-      typing.remove();
-      addMessage(data.error || "Something went wrong.", "error");
-      return;
-    }
-
-    // Parse the SSE stream: events are separated by blank lines.
-    const reader = res.body.getReader();
-    const decoder = new TextDecoder();
-    let buf = "";
-    let finished = false;
-
-    while (!finished) {
-      const { done, value } = await reader.read();
-      if (done) break;
-      buf += decoder.decode(value, { stream: true });
-      const events = buf.split("\n\n");
-      buf = events.pop();
-      for (const event of events) {
-        const line = event.trim();
-        if (!line.startsWith("data:")) continue;
-        const data = JSON.parse(line.slice(5));
-        if (data.delta) {
-          appendDelta(data.delta);
-        } else if (data.done) {
-          if (!botEl) appendDelta("(empty response)");
-          if (botEl) {
-            const v = document.createElement("span");
-            v.className = "via";
-            v.textContent = `— via ${data.provider} · ${data.model}`;
-            botEl.appendChild(v);
-          }
-          history.push({ role: "assistant", content: botText });
-          finished = true;
-        } else if (data.error) {
-          typing.remove();
-          addMessage(data.error, "error");
-          finished = true;
-        }
-      }
-    }
-
-    if (!botEl && !finished) {
-      typing.remove();
-      addMessage("Connection dropped before a reply arrived.", "error");
+    if (providerSel.value === "__all__") {
+      await streamAll(typing);
+    } else {
+      await streamOne(typing);
     }
   } catch (err) {
     typing.remove();
