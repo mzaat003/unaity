@@ -1,0 +1,151 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#0b0f1a" />
+  <link rel="manifest" href="./manifest.webmanifest" />
+  <link rel="icon" href="./icon-192.png" />
+  <link rel="apple-touch-icon" href="./icon-192.png" />
+  <title>unaity</title>
+  <style>
+    :root {
+      --bg: #0b0f1a; --panel: #121829; --panel-2: #1a2338;
+      --text: #e8ecf6; --muted: #8a94ad; --accent: #7c5cff; --accent-2: #2563eb;
+      --user: #2a3550; --border: #263149;
+    }
+    * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+    html, body { height: 100%; margin: 0; }
+    body {
+      background: var(--bg); color: var(--text);
+      font: 16px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      display: flex; flex-direction: column;
+    }
+    header {
+      display: flex; align-items: center; gap: 10px;
+      padding: calc(10px + env(safe-area-inset-top)) 14px 10px;
+      background: var(--panel); border-bottom: 1px solid var(--border);
+    }
+    .logo {
+      width: 30px; height: 30px; border-radius: 8px; flex: none;
+      background: linear-gradient(135deg, var(--accent), var(--accent-2));
+      display: grid; place-items: center; font-weight: 800; color: #fff;
+    }
+    header h1 { font-size: 17px; margin: 0; flex: 1; font-weight: 700; }
+    select, .iconbtn {
+      background: var(--panel-2); color: var(--text);
+      border: 1px solid var(--border); border-radius: 8px;
+      padding: 7px 8px; font-size: 13px;
+    }
+    select { max-width: 42vw; }
+    .iconbtn { cursor: pointer; line-height: 1; }
+    #chat {
+      flex: 1; overflow-y: auto; padding: 16px;
+      display: flex; flex-direction: column; gap: 14px;
+      -webkit-overflow-scrolling: touch;
+    }
+    .msg { max-width: 88%; padding: 11px 14px; border-radius: 16px; white-space: pre-wrap; word-wrap: break-word; }
+    .msg.user { align-self: flex-end; background: var(--user); border-bottom-right-radius: 4px; }
+    .msg.bot { align-self: flex-start; background: var(--panel); border: 1px solid var(--border); border-bottom-left-radius: 4px; }
+    .msg.error { align-self: flex-start; background: #3a1620; border: 1px solid #6d2436; color: #ffb4c0; }
+    .via { display: block; margin-top: 6px; font-size: 11px; color: var(--muted); }
+    .brain { display: block; margin-bottom: 6px; font-size: 11px; font-weight: 700; letter-spacing: .4px; color: #9f8bff; word-break: break-all; }
+    .msg.error .brain { color: #ffb4c0; }
+    .empty { margin: auto; text-align: center; color: var(--muted); max-width: 320px; }
+    .empty .big { font-size: 40px; margin-bottom: 8px; }
+    form {
+      display: flex; gap: 8px; padding: 10px 12px calc(10px + env(safe-area-inset-bottom));
+      background: var(--panel); border-top: 1px solid var(--border);
+    }
+    textarea {
+      flex: 1; resize: none; background: var(--panel-2); color: var(--text);
+      border: 1px solid var(--border); border-radius: 14px; padding: 11px 14px;
+      font: inherit; max-height: 140px;
+    }
+    button.send {
+      flex: none; width: 46px; border: 0; border-radius: 50%;
+      background: linear-gradient(135deg, var(--accent), var(--accent-2));
+      color: #fff; font-size: 20px; cursor: pointer;
+    }
+    button.send:disabled { opacity: .5; }
+    .dots span { animation: blink 1.2s infinite both; }
+    .dots span:nth-child(2){ animation-delay: .2s } .dots span:nth-child(3){ animation-delay: .4s }
+    @keyframes blink { 0%,80%,100%{opacity:.2} 40%{opacity:1} }
+
+    /* Overlay used for both the first-run setup and the settings panel. */
+    .overlay {
+      position: fixed; inset: 0; background: rgba(4,7,14,.72);
+      display: none; align-items: center; justify-content: center; padding: 20px; z-index: 10;
+    }
+    .overlay.show { display: flex; }
+    .card {
+      background: var(--panel); border: 1px solid var(--border); border-radius: 18px;
+      padding: 22px; width: 100%; max-width: 420px;
+    }
+    .card h2 { margin: 0 0 6px; font-size: 20px; }
+    .card p { margin: 6px 0 14px; color: var(--muted); font-size: 14px; }
+    .card label { display: block; font-size: 13px; margin: 12px 0 6px; color: var(--muted); }
+    .card input[type=password], .card input[type=text] {
+      width: 100%; background: var(--panel-2); color: var(--text);
+      border: 1px solid var(--border); border-radius: 10px; padding: 11px 12px; font: inherit;
+    }
+    .card .row { display: flex; align-items: center; gap: 8px; margin-top: 14px; font-size: 14px; }
+    .card a { color: #9f8bff; }
+    .btn {
+      display: inline-block; margin-top: 16px; width: 100%; border: 0; border-radius: 12px;
+      padding: 12px; font: inherit; font-weight: 700; color: #fff; cursor: pointer;
+      background: linear-gradient(135deg, var(--accent), var(--accent-2));
+    }
+    .btn.secondary { background: var(--panel-2); border: 1px solid var(--border); color: var(--text); font-weight: 600; }
+    .hint { font-size: 12px; color: var(--muted); margin-top: 10px; }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="logo">U</div>
+    <h1>unaity</h1>
+    <select id="model" title="Model"></select>
+    <button class="iconbtn" id="gear" title="Settings" aria-label="Settings">⚙️</button>
+  </header>
+
+  <div id="chat">
+    <div class="empty" id="empty">
+      <div class="big">🧠</div>
+      <div><strong>One brain, many AIs.</strong></div>
+      <div>Ask anything. Turn on “compare” in settings to ask several models at once.</div>
+    </div>
+  </div>
+
+  <form id="form">
+    <textarea id="input" rows="1" placeholder="Message unaity…" autocomplete="off"></textarea>
+    <button class="send" id="send" type="submit" aria-label="Send">➤</button>
+  </form>
+
+  <!-- First-run setup / settings -->
+  <div class="overlay" id="overlay">
+    <div class="card">
+      <h2 id="cardTitle">Welcome to unaity</h2>
+      <p id="cardIntro">
+        Paste a free OpenRouter API key to begin. It’s stored only in this
+        browser — never uploaded, never in the code.
+      </p>
+      <label for="keyInput">OpenRouter API key</label>
+      <input id="keyInput" type="password" placeholder="sk-or-..." autocomplete="off" />
+      <p class="hint">
+        No key yet? Get one free at
+        <a href="https://openrouter.ai/keys" target="_blank" rel="noopener">openrouter.ai/keys</a>.
+        Tip: set a $0 credit limit there to stay on free models only.
+      </p>
+      <div class="row">
+        <input type="checkbox" id="compare" />
+        <label for="compare" style="margin:0;color:var(--text)">Compare mode — ask 3 models at once</label>
+      </div>
+      <button class="btn" id="saveKey">Save & start</button>
+      <button class="btn secondary" id="closeSettings" style="display:none">Close</button>
+      <button class="btn secondary" id="forget" style="display:none">Forget key (sign out)</button>
+    </div>
+  </div>
+
+  <script src="./app.js"></script>
+</body>
+</html>

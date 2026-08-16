@@ -18,9 +18,37 @@ your app / CLI  ->  unaity router  ->  ┌─ OpenRouter (100s of models, many f
 
 ## Launch it
 
-There are two ways to run unaity. Both are free. Pick one:
+unaity comes in two forms. Pick the one that fits — both are free.
 
-**A) On your own computer** (fastest — 2 minutes):
+### ⭐ Free forever, no server, no card: GitHub Pages (recommended)
+
+The `static/` folder is a **backend-free** version of unaity that runs entirely
+in your browser and talks to OpenRouter directly. There's nothing to run and
+nothing to pay for — it hosts on GitHub Pages as static files.
+
+1. Push this repo to GitHub (you're likely already there).
+2. Repo **Settings → Pages → Build and deployment → Source: GitHub Actions**
+   (one tap, doable from a phone). The included workflow does the rest on every
+   push to `main`.
+3. You get a permanent URL like `https://<you>.github.io/unaity/`. Open it on
+   any phone or laptop; on Android, Chrome's **⋮ → Install app** makes it a
+   home-screen app.
+4. First time, it asks for a free [OpenRouter key](https://openrouter.ai/keys).
+
+**Your key is stored only in your browser** (localStorage) — never uploaded,
+never in the code, never visible to other visitors of the public page. On a new
+device you just open the URL and paste the key once. Tip: set a **$0 credit
+limit** on OpenRouter to stay strictly on free models.
+
+This version uses OpenRouter (one key → hundreds of models). "Compare mode"
+asks three free models at once.
+
+### The full server version (all providers, local or hosted)
+
+Runs the Node server with the multi-provider router (OpenRouter, Groq, Gemini,
+Ollama) and keeps your keys server-side.
+
+**On your own computer** (2 minutes):
 
 ```bash
 npm install
@@ -29,15 +57,11 @@ npm start                     # open http://localhost:3000
 ```
 
 Open that URL in any browser on the same Wi-Fi (use your computer's LAN IP,
-e.g. `http://192.168.1.20:3000`, from your phone). On Android, Chrome's
-**⋮ → Install app** turns it into a home-screen app.
+e.g. `http://192.168.1.20:3000`, from your phone).
 
-**B) On free hosting** (reachable from anywhere, no computer left running):
-
-This repo ships a `render.yaml`, so on [Render](https://render.com) you can go
-**New → Blueprint → pick this repo**, paste one key when prompted, and Render
-gives you a public `https://…` URL that works on every device. A `Dockerfile`
-is also included for Railway, Fly.io, Cloud Run, or any Docker host.
+**On free hosting:** this repo ships a `render.yaml` for a one-click
+[Render](https://render.com) Blueprint deploy, and a `Dockerfile` for Railway,
+Fly.io, Cloud Run, or any Docker host.
 
 > Either way you need **one** provider key first (they're free — see the table
 > below). unaity never creates accounts for you; you make one key by hand, once.
