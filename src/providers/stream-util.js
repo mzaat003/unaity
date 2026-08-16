@@ -14,6 +14,9 @@ export async function* sseData(body) {
       if (t.startsWith("data:")) yield t.slice(5).trim();
     }
   }
+  // Flush a final line that arrived without a trailing newline.
+  const t = buf.trim();
+  if (t.startsWith("data:")) yield t.slice(5).trim();
 }
 
 export async function* ndjson(body) {
@@ -28,4 +31,7 @@ export async function* ndjson(body) {
       if (t) yield JSON.parse(t);
     }
   }
+  // Flush a final object that arrived without a trailing newline.
+  const t = buf.trim();
+  if (t) yield JSON.parse(t);
 }

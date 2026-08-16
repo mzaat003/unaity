@@ -137,13 +137,15 @@ send `{"provider","error"}` without stopping the others.
 ```
 src/
   router.js          the brain: provider selection + fallback
-  server.js          HTTP endpoint + serves the web app (/chat, /health)
+  app.js             builds the Express app (routes + serves the web app)
+  server.js          starts the app on a port
   cli.js             command-line entry point
   providers/
-    openrouter.js    each file wraps one official API behind chat()
+    openrouter.js    each file wraps one official API behind chat()/stream()
     groq.js
     gemini.js
     ollama.js
+    stream-util.js   shared SSE / NDJSON parsers
 public/              the installable web app (PWA)
   index.html         mobile-first chat UI
   app.js             frontend logic (calls /chat, keeps context)
@@ -151,7 +153,25 @@ public/              the installable web app (PWA)
   icon-192.png / icon-512.png
 scripts/
   gen-icons.mjs      regenerates the icons (dependency-free PNG writer)
+test/                automated tests (node:test) against mock providers
 ```
+
+## Tests
+
+```bash
+npm test
+```
+
+Runs a dependency-free `node:test` suite that spins up mock providers on
+localhost and exercises the stream parsers, the router's fallback and
+all-brains fan-out, and every HTTP endpoint — no real API keys or network
+needed. Run it after any change to catch regressions.
+
+## Point a provider at a custom endpoint
+
+`OPENROUTER_BASE_URL` / `GROQ_BASE_URL` let you aim those providers at any
+OpenAI-compatible server — a local **LM Studio** or **vLLM**, or a proxy —
+instead of the default hosted API. Handy for fully local, fully free setups.
 
 Adding a provider is one file: export `name`, `defaultModel`, `isConfigured()`,
 and `chat({ messages, model, signal })`, then list it in `src/router.js`.

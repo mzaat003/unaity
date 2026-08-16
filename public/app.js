@@ -61,6 +61,11 @@ async function readSse(res, onEvent) {
   const reader = res.body.getReader();
   const decoder = new TextDecoder();
   let buf = "";
+  const handle = (event) => {
+    const line = event.trim();
+    if (!line.startsWith("data:")) return true;
+    return onEvent(JSON.parse(line.slice(5))) !== false;
+  };
   for (;;) {
     const { done, value } = await reader.read();
     if (done) break;
@@ -68,11 +73,11 @@ async function readSse(res, onEvent) {
     const events = buf.split("\n\n");
     buf = events.pop();
     for (const event of events) {
-      const line = event.trim();
-      if (!line.startsWith("data:")) continue;
-      if (onEvent(JSON.parse(line.slice(5))) === false) return;
+      if (!handle(event)) return;
     }
   }
+  // Flush a final event that arrived without the trailing blank line.
+  if (buf.trim()) handle(buf);
 }
 
 // --- single-brain streaming (default and forced-provider modes) ---
@@ -107,6 +112,7 @@ async function streamOne(typing) {
   }
 
   let finished = false;
+  let recorded = false;
   await readSse(res, (data) => {
     if (data.delta) {
       appendDelta(data.delta);
@@ -117,6 +123,7 @@ async function streamOne(typing) {
       v.textContent = `— via ${data.provider} · ${data.model}`;
       botEl.appendChild(v);
       history.push({ role: "assistant", content: botText });
+      recorded = true;
       finished = true;
       return false;
     } else if (data.error) {
@@ -131,12 +138,14 @@ async function streamOne(typing) {
     typing.remove();
     addMessage("Connection dropped before a reply arrived.", "error");
   }
+  return recorded;
 }
 
 // --- "ask all brains at once": one card per provider, streaming in parallel ---
 async function streamAll(typing) {
   const cards = {}; // provider -> {el, textNode, text}
   let winner = null; // first provider to finish successfully
+  let recorded = false;
 
   const ensureCard = (provider, model) => {
     if (cards[provider]) return cards[provider];
@@ -186,7 +195,10 @@ async function streamAll(typing) {
       card.textNode.textContent = card.text || data.error;
     } else if (data.allDone) {
       // Keep the fastest successful answer as conversation context.
-      if (winner) history.push({ role: "assistant", content: winner.text });
+      if (winner) {
+        history.push({ role: "assistant", content: winner.text });
+        recorded = true;
+      }
       return false;
     } else if (data.error) {
       typing.remove();
@@ -199,6 +211,7 @@ async function streamAll(typing) {
     typing.remove();
     addMessage("No brains answered.", "error");
   }
+  return recorded;
 }
 
 // Auto-grow the textarea.
@@ -227,16 +240,21 @@ form.addEventListener("submit", async (e) => {
   send.disabled = true;
 
   const typing = addTyping();
+  let recorded = false;
   try {
     if (providerSel.value === "__all__") {
-      await streamAll(typing);
+      recorded = await streamAll(typing);
     } else {
-      await streamOne(typing);
+      recorded = await streamOne(typing);
     }
   } catch (err) {
     typing.remove();
     addMessage(String(err), "error");
   } finally {
+    // If no assistant reply was recorded, drop the just-added user turn so the
+    // conversation history stays valid (no two user turns in a row, which some
+    // providers like Gemini reject) and a retry starts clean.
+    if (!recorded && history.at(-1)?.role === "user") history.pop();
     send.disabled = false;
     input.focus();
   }

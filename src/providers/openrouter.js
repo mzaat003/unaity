@@ -3,19 +3,24 @@
 
 import { sseData } from "./stream-util.js";
 
-const BASE_URL = "https://openrouter.ai/api/v1/chat/completions";
-
 export const name = "openrouter";
 
 // A free model by default so it works out of the box. Override per-request.
 export const defaultModel = "meta-llama/llama-3.3-70b-instruct:free";
+
+// Base can be pointed at any OpenAI-compatible endpoint (local LM Studio /
+// vLLM, a proxy, etc.). Read at call time so env changes and tests take effect.
+function completionsUrl() {
+  const base = process.env.OPENROUTER_BASE_URL || "https://openrouter.ai/api/v1";
+  return `${base.replace(/\/$/, "")}/chat/completions`;
+}
 
 export function isConfigured() {
   return Boolean(process.env.OPENROUTER_API_KEY);
 }
 
 export async function chat({ messages, model, signal }) {
-  const res = await fetch(BASE_URL, {
+  const res = await fetch(completionsUrl(), {
     method: "POST",
     signal,
     headers: {
@@ -39,7 +44,7 @@ export async function chat({ messages, model, signal }) {
 
 // Yields text deltas as they arrive (OpenAI-style SSE).
 export async function* stream({ messages, model, signal }) {
-  const res = await fetch(BASE_URL, {
+  const res = await fetch(completionsUrl(), {
     method: "POST",
     signal,
     headers: {
