@@ -74,6 +74,38 @@ curl -s localhost:3000/health
 # { "ok": true, "providers": ["openrouter","groq"] }
 ```
 
+## Web app + Android app (same thing, free)
+
+`unaity` ships a mobile-friendly chat UI that is also an installable **PWA**
+(Progressive Web App). Start the server and open it in any browser:
+
+```bash
+npm start
+# open http://localhost:3000  (works on any phone or laptop on your network)
+```
+
+- **On a laptop:** open the URL in Chrome/Edge/Safari — that's your web version.
+- **On Android:** open the URL in Chrome, tap the **⋮ menu → "Install app"** (or
+  "Add to Home screen"). It lands on your home screen and runs fullscreen like a
+  native app. **No Play Store, no fee, no separate codebase** — one app, everywhere.
+- **On iPhone:** Share → "Add to Home Screen" does the same thing.
+
+To reach it from your phone while the server runs on your laptop, both on the
+same Wi-Fi, use the laptop's LAN IP (e.g. `http://192.168.1.20:3000`).
+
+### Make it reachable from anywhere (free)
+
+The API-only providers (OpenRouter, Groq, Gemini) work from any host, so you can
+deploy the server to a free tier and reach it from any device, anywhere:
+
+- **Render**, **Railway**, or **Fly.io** free tiers — push this repo, set your
+  keys as environment variables, done.
+- **Cloudflare Tunnel** / **ngrok** — expose your laptop's `localhost:3000`
+  publicly for free without deploying.
+
+> Note: **Ollama** (local models) only runs where it's installed, so it won't be
+> available on a cloud host — the router just falls past it to the API providers.
+
 ## How routing works
 
 The `PROVIDER_ORDER` in `.env` sets the priority. The router tries the first
@@ -86,13 +118,20 @@ and reports which one actually answered. Force a specific one with
 ```
 src/
   router.js          the brain: provider selection + fallback
-  server.js          HTTP endpoint (/chat, /health)
+  server.js          HTTP endpoint + serves the web app (/chat, /health)
   cli.js             command-line entry point
   providers/
     openrouter.js    each file wraps one official API behind chat()
     groq.js
     gemini.js
     ollama.js
+public/              the installable web app (PWA)
+  index.html         mobile-first chat UI
+  app.js             frontend logic (calls /chat, keeps context)
+  manifest.webmanifest  + service-worker.js  -> installable on Android/iOS
+  icon-192.png / icon-512.png
+scripts/
+  gen-icons.mjs      regenerates the icons (dependency-free PNG writer)
 ```
 
 Adding a provider is one file: export `name`, `defaultModel`, `isConfigured()`,
