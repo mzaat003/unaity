@@ -4,7 +4,7 @@
 //   npm run ask -- --provider groq "write a haiku"
 
 import "dotenv/config";
-import { route, availableProviders } from "./router.js";
+import { routeStream, availableProviders } from "./router.js";
 
 function parseArgs(argv) {
   const opts = {};
@@ -28,8 +28,10 @@ if (!opts.prompt) {
 }
 
 try {
-  const result = await route(opts);
-  console.log(result.text);
+  // Stream the reply to stdout as it arrives.
+  opts.onDelta = (delta) => process.stdout.write(delta);
+  const result = await routeStream(opts);
+  process.stdout.write("\n");
   console.error(`\n— via ${result.provider} (${result.model})`);
 } catch (err) {
   console.error(`Error: ${err.message || err}`);

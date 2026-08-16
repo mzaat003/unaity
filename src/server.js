@@ -9,7 +9,7 @@ import "dotenv/config";
 import express from "express";
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
-import { route, availableProviders } from "./router.js";
+import { route, routeStream, availableProviders } from "./router.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
@@ -34,6 +34,47 @@ app.post("/chat", async (req, res) => {
   } catch (err) {
     res.status(502).json({ error: String(err.message || err) });
   }
+});
+
+// Streaming variant: Server-Sent Events. Each event is a JSON object:
+//   {delta, provider, model}  — a chunk of text as it arrives
+//   {done, provider, model}   — stream finished successfully
+//   {error}                   — routing failed
+app.post("/chat/stream", async (req, res) => {
+  const { prompt, messages, system, provider, model } = req.body || {};
+  if (!prompt && !(Array.isArray(messages) && messages.length)) {
+    return res.status(400).json({ error: "Provide `prompt` or `messages`." });
+  }
+
+  res.setHeader("Content-Type", "text/event-stream");
+  res.setHeader("Cache-Control", "no-cache");
+  res.setHeader("Connection", "keep-alive");
+  res.flushHeaders();
+
+  // Stop upstream provider calls if the client disconnects mid-stream.
+  // (Watch the response, not the request: req 'close' fires as soon as the
+  // request body is consumed, which would abort our own stream instantly.)
+  const abort = new AbortController();
+  res.on("close", () => {
+    if (!res.writableEnded) abort.abort();
+  });
+
+  const send = (obj) => res.write(`data: ${JSON.stringify(obj)}\n\n`);
+  try {
+    const result = await routeStream({
+      prompt,
+      messages,
+      system,
+      provider,
+      model,
+      signal: abort.signal,
+      onDelta: (delta, prov, mod) => send({ delta, provider: prov, model: mod }),
+    });
+    send({ done: true, provider: result.provider, model: result.model });
+  } catch (err) {
+    if (!abort.signal.aborted) send({ error: String(err.message || err) });
+  }
+  res.end();
 });
 
 const port = process.env.PORT || 3000;

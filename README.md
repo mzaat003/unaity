@@ -67,6 +67,12 @@ curl -s localhost:3000/chat \
   -d '{"prompt":"give me three startup ideas"}'
 ```
 
+**Streaming:** the web UI and CLI stream replies word-by-word automatically.
+For your own integrations, `POST /chat/stream` returns Server-Sent Events —
+`{"delta": "..."}` chunks followed by `{"done": true, "provider": "...", "model": "..."}`
+(or `{"error": "..."}`). Plain `POST /chat` stays available for simple
+request/response use.
+
 Check what's wired up:
 
 ```bash

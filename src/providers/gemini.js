@@ -2,6 +2,8 @@
 // which differs from the OpenAI format, so we translate messages here.
 // Docs: https://ai.google.dev/gemini-api/docs
 
+import { sseData } from "./stream-util.js";
+
 export const name = "gemini";
 
 export const defaultModel = "gemini-2.0-flash";
@@ -51,4 +53,31 @@ export async function chat({ messages, model, signal }) {
   const text =
     data.candidates?.[0]?.content?.parts?.map((p) => p.text).join("") ?? "";
   return { text };
+}
+
+// Yields text deltas as they arrive (Gemini's streamGenerateContent SSE).
+export async function* stream({ messages, model, signal }) {
+  const useModel = model || defaultModel;
+  const url =
+    `https://generativelanguage.googleapis.com/v1beta/models/` +
+    `${useModel}:streamGenerateContent?alt=sse&key=${process.env.GEMINI_API_KEY}`;
+
+  const res = await fetch(url, {
+    method: "POST",
+    signal,
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(toGeminiPayload(messages)),
+  });
+
+  if (!res.ok) {
+    const body = await res.text();
+    throw new Error(`gemini ${res.status}: ${body.slice(0, 300)}`);
+  }
+
+  for await (const data of sseData(res.body)) {
+    const parsed = JSON.parse(data);
+    const delta =
+      parsed.candidates?.[0]?.content?.parts?.map((p) => p.text).join("") ?? "";
+    if (delta) yield delta;
+  }
 }

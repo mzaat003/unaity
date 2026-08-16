@@ -50,22 +50,25 @@ function normalizeMessages({ prompt, messages, system }) {
  * @param {string} [opts.model]       Override the provider's default model.
  * @returns {Promise<{text, provider, model, attempts}>}
  */
-export async function route(opts = {}) {
-  const messages = normalizeMessages(opts);
-
+function pickCandidates(opts) {
   let candidates = orderedProviders().filter((p) => p.isConfigured());
   if (opts.provider) {
     const forced = REGISTRY[opts.provider];
     if (!forced) throw new Error(`unknown provider: ${opts.provider}`);
     candidates = [forced];
   }
-
   if (!candidates.length) {
     throw new Error(
       "No providers configured. Add at least one key in .env " +
         "(see .env.example)."
     );
   }
+  return candidates;
+}
+
+export async function route(opts = {}) {
+  const messages = normalizeMessages(opts);
+  const candidates = pickCandidates(opts);
 
   const attempts = [];
   for (const provider of candidates) {
@@ -80,6 +83,44 @@ export async function route(opts = {}) {
     } catch (err) {
       attempts.push({ provider: provider.name, error: String(err.message || err) });
       // fall through to the next provider
+    }
+  }
+
+  const summary = attempts
+    .map((a) => `${a.provider}: ${a.error}`)
+    .join(" | ");
+  throw new Error(`All providers failed. ${summary}`);
+}
+
+/**
+ * Streaming version of route(). Calls opts.onDelta(textChunk, provider, model)
+ * for each piece of text as it arrives. Falls back to the next provider only
+ * if a provider fails BEFORE emitting anything (once text has streamed to the
+ * client we can't cleanly restart, so mid-stream errors propagate).
+ *
+ * @returns {Promise<{text, provider, model, attempts}>} the full assembled text.
+ */
+export async function routeStream(opts = {}) {
+  const messages = normalizeMessages(opts);
+  const candidates = pickCandidates(opts);
+
+  const attempts = [];
+  for (const provider of candidates) {
+    const model = opts.model || provider.defaultModel;
+    let text = "";
+    try {
+      for await (const delta of provider.stream({
+        messages,
+        model,
+        signal: opts.signal,
+      })) {
+        text += delta;
+        opts.onDelta?.(delta, provider.name, model);
+      }
+      return { text, provider: provider.name, model, attempts };
+    } catch (err) {
+      if (text) throw err; // already streamed output — don't restart elsewhere
+      attempts.push({ provider: provider.name, error: String(err.message || err) });
     }
   }
 
