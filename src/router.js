@@ -93,6 +93,52 @@ export async function route(opts = {}) {
 }
 
 /**
+ * "Ask all brains at once": fan the same conversation out to EVERY configured
+ * provider in parallel, streaming each one's reply as it arrives.
+ *
+ * Callbacks (all optional):
+ *   opts.onDelta(providerName, textChunk, model)  — a chunk from one provider
+ *   opts.onDone(providerName, fullText, model)    — that provider finished
+ *   opts.onError(providerName, errorMessage, model) — that provider failed
+ *
+ * Never rejects for individual provider failures — each result records ok.
+ * @returns {Promise<Array<{provider, model, ok, text?, error?}>>}
+ */
+export function routeAllStream(opts = {}) {
+  const messages = normalizeMessages(opts);
+  const candidates = orderedProviders().filter((p) => p.isConfigured());
+  if (!candidates.length) {
+    throw new Error(
+      "No providers configured. Add at least one key in .env " +
+        "(see .env.example)."
+    );
+  }
+
+  const runs = candidates.map(async (provider) => {
+    const model = opts.model || provider.defaultModel;
+    let text = "";
+    try {
+      for await (const delta of provider.stream({
+        messages,
+        model,
+        signal: opts.signal,
+      })) {
+        text += delta;
+        opts.onDelta?.(provider.name, delta, model);
+      }
+      opts.onDone?.(provider.name, text, model);
+      return { provider: provider.name, model, ok: true, text };
+    } catch (err) {
+      const error = String(err.message || err);
+      opts.onError?.(provider.name, error, model);
+      return { provider: provider.name, model, ok: false, error };
+    }
+  });
+
+  return Promise.all(runs);
+}
+
+/**
  * Streaming version of route(). Calls opts.onDelta(textChunk, provider, model)
  * for each piece of text as it arrives. Falls back to the next provider only
  * if a provider fails BEFORE emitting anything (once text has streamed to the

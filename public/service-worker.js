@@ -2,7 +2,7 @@
 // Android and loads instantly / offline. API calls to /chat always go to the
 // network (never cached).
 
-const CACHE = "unaity-shell-v2";
+const CACHE = "unaity-shell-v3";
 const SHELL = [
   "./",
   "./index.html",
